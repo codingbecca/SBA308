@@ -77,9 +77,33 @@ const LearnerSubmissions = [
 ];
 
 function getLearnerData(course, assignmentGroup, submissions) {
-  // here, we would process this data to achieve the desired result.
+  // step one is to use the helper functions to validate the data
+  validateData(course, assignmentGroup);
+  validateObjFields(course, assignmentGroup, submissions);
   // our result is going to be an array of objects so we can initialize an empty array to hold the result
   const result = [];
+  //we need a learnerObject to update and push to the result array. This object will need to be cleared(reset)
+  let learnerObject = {};
+
+  // filter out assignments that aren't yet due
+  const assignments = filterAssignments(assignmentGroup.assignments);
+  const assignmentIds = getAssignmentIds(assignments);
+  
+
+  // call the learnerIds helper function to get an array of the learner's ids
+  const learnersIds = learnerIds(submissions);
+
+  for (let i = 0; i < learnersIds.length; i++) {
+    learnerObject.id = learnersIds[i];
+    learnerObject.avg = 0;
+    for (const submission of submissions) {
+        if(submission.learner_id === learnerObject.id && assignmentIds.includes(submission.assignment_id)){
+            learnerObject[`${submission.assignment_id}`] = parseFloat(scoreAssignment(assignments, submission).toFixed(4));
+        }
+    }
+    result.push(learnerObject);
+    learnerObject = {};
+  }
 
   return result;
 
@@ -153,6 +177,51 @@ function getLearnerData(course, assignmentGroup, submissions) {
       }
     });
   }
+
+  // a helper function to get the learner ids from learner submissions
+  function learnerIds(submissions) {
+    const learner_ids = [];
+
+    for (const learnerSubmission of submissions) {
+      if (!learner_ids.includes(learnerSubmission.learner_id)) {
+        learner_ids.push(learnerSubmission.learner_id);
+      }
+    }
+
+    learner_ids.sort((a, b) => a - b);
+    return learner_ids;
+  }
+
+  // a helper function to filter out assignments that aren't due yet
+  function filterAssignments (assignments) {
+      const currentDate = new Date();
+      return assignments.filter((assignment) => {
+        return currentDate > Date.parse(assignment.due_at)
+      })
+  }
+
+  // a helper function to get the assignment ids from the array of assignments
+  function getAssignmentIds(assignments) {
+    const assignmentIds = [];
+    assignments.forEach((assignment) => assignmentIds.push(assignment.id))
+    return assignmentIds;
+  }
+
+  // a helper function to get the assignment score
+  function scoreAssignment(assignments, submission){
+    let score = 0;
+    const assignment = assignments.find((assignment) => assignment.id === submission.assignment_id)
+    if(assignment){
+        if(Date.parse(assignment.due_at) < Date.parse(submission.submission.submitted_at)){
+            const pointDeduction = assignment.points_possible * 0.1;
+            const points = submission.submission.score - pointDeduction;
+            score = points/assignment.points_possible;
+        } else {
+            score = submission.submission.score / assignment.points_possible;
+        }
+    }
+    return score;
+  }
 }
 
 try {
@@ -162,7 +231,6 @@ try {
     LearnerSubmissions
   );
   console.log(result);
-  
 } catch (e) {
   console.log(e);
 }
