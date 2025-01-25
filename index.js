@@ -95,7 +95,7 @@ function getLearnerData(course, assignmentGroup, submissions) {
 
   for (let i = 0; i < learnersIds.length; i++) {
     learnerObject.id = learnersIds[i];
-    learnerObject.avg = 0;
+    learnerObject.avg = parseFloat(avgScore(assignments, submissions, learnerObject.id).toFixed(4))
     for (const submission of submissions) {
         if(submission.learner_id === learnerObject.id && assignmentIds.includes(submission.assignment_id)){
             learnerObject[`${submission.assignment_id}`] = parseFloat(scoreAssignment(assignments, submission).toFixed(4));
@@ -104,6 +104,7 @@ function getLearnerData(course, assignmentGroup, submissions) {
     result.push(learnerObject);
     learnerObject = {};
   }
+
 
   return result;
 
@@ -222,6 +223,20 @@ function getLearnerData(course, assignmentGroup, submissions) {
     }
     return score;
   }
+
+  function avgScore(assignments, submissions, learnerId) {
+    const totalPointsPossible = assignments.reduce((acc, assignment) => acc + assignment.points_possible, 0)
+    let totalPoints = 0;
+    for (const submission of submissions) {
+            const assignment = assignments.find((assignment) => assignment.id === submission.assignment_id);
+            if (learnerId === submission.learner_id && assignment){
+                totalPoints += scoreAssignment(assignments, submission) * assignment.points_possible;
+            }
+    }
+    return totalPoints / totalPointsPossible;
+  }
+
+  
 }
 
 try {
