@@ -88,23 +88,28 @@ function getLearnerData(course, assignmentGroup, submissions) {
   // filter out assignments that aren't yet due
   const assignments = filterAssignments(assignmentGroup.assignments);
   const assignmentIds = getAssignmentIds(assignments);
-  
 
   // call the learnerIds helper function to get an array of the learner's ids
   const learnersIds = learnerIds(submissions);
 
   for (let i = 0; i < learnersIds.length; i++) {
     learnerObject.id = learnersIds[i];
-    learnerObject.avg = parseFloat(avgScore(assignments, submissions, learnerObject.id).toFixed(4))
+    learnerObject.avg = parseFloat(
+      avgScore(assignments, submissions, learnerObject.id).toFixed(4)
+    );
     for (const submission of submissions) {
-        if(submission.learner_id === learnerObject.id && assignmentIds.includes(submission.assignment_id)){
-            learnerObject[`${submission.assignment_id}`] = parseFloat(scoreAssignment(assignments, submission).toFixed(4));
-        }
+      if (
+        submission.learner_id === learnerObject.id &&
+        assignmentIds.includes(submission.assignment_id)
+      ) {
+        learnerObject[`${submission.assignment_id}`] = parseFloat(
+          scoreAssignment(assignments, submission).toFixed(4)
+        );
+      }
     }
     result.push(learnerObject);
     learnerObject = {};
   }
-
 
   return result;
 
@@ -137,10 +142,7 @@ function getLearnerData(course, assignmentGroup, submissions) {
       throw new Error(
         "Course object not valid. Ensure the id is a number and the name is a string."
       );
-    }
-
-    // assignmentGroup object next, first validate that id, course_id, and group_weight are numbers, and name is a string
-    if (
+    } else if ( // assignmentGroup object next, first validate that id, course_id, and group_weight are numbers, and name is a string
       typeof assignmentGroup.id !== "number" ||
       typeof assignmentGroup.course_id !== "number" ||
       typeof assignmentGroup.group_weight !== "number" ||
@@ -184,9 +186,10 @@ function getLearnerData(course, assignmentGroup, submissions) {
     const learner_ids = [];
 
     for (const learnerSubmission of submissions) {
-      if (!learner_ids.includes(learnerSubmission.learner_id)) {
-        learner_ids.push(learnerSubmission.learner_id);
-      }
+      if (learner_ids.includes(learnerSubmission.learner_id)) {
+        continue;
+    }
+    learner_ids.push(learnerSubmission.learner_id);
     }
 
     learner_ids.sort((a, b) => a - b);
@@ -194,49 +197,58 @@ function getLearnerData(course, assignmentGroup, submissions) {
   }
 
   // a helper function to filter out assignments that aren't due yet
-  function filterAssignments (assignments) {
-      const currentDate = new Date();
-      return assignments.filter((assignment) => {
-        return currentDate > Date.parse(assignment.due_at)
-      })
+  function filterAssignments(assignments) {
+    const currentDate = new Date();
+    return assignments.filter((assignment) => {
+      return currentDate > Date.parse(assignment.due_at);
+    });
   }
 
   // a helper function to get the assignment ids from the array of assignments
   function getAssignmentIds(assignments) {
     const assignmentIds = [];
-    assignments.forEach((assignment) => assignmentIds.push(assignment.id))
+    assignments.forEach((assignment) => assignmentIds.push(assignment.id));
     return assignmentIds;
   }
 
   // a helper function to get the assignment score
-  function scoreAssignment(assignments, submission){
+  function scoreAssignment(assignments, submission) {
     let score = 0;
-    const assignment = assignments.find((assignment) => assignment.id === submission.assignment_id)
-    if(assignment){
-        if(Date.parse(assignment.due_at) < Date.parse(submission.submission.submitted_at)){
-            const pointDeduction = assignment.points_possible * 0.1;
-            const points = submission.submission.score - pointDeduction;
-            score = points/assignment.points_possible;
-        } else {
-            score = submission.submission.score / assignment.points_possible;
-        }
+    const assignment = assignments.find(
+      (assignment) => assignment.id === submission.assignment_id
+    );
+    if (assignment) {
+      if (
+        Date.parse(assignment.due_at) <
+        Date.parse(submission.submission.submitted_at)
+      ) {
+        const pointDeduction = assignment.points_possible * 0.1;
+        const points = submission.submission.score - pointDeduction;
+        score = points / assignment.points_possible;
+      } else {
+        score = submission.submission.score / assignment.points_possible;
+      }
     }
     return score;
   }
 
   function avgScore(assignments, submissions, learnerId) {
-    const totalPointsPossible = assignments.reduce((acc, assignment) => acc + assignment.points_possible, 0)
+    const totalPointsPossible = assignments.reduce(
+      (acc, assignment) => acc + assignment.points_possible,
+      0
+    );
     let totalPoints = 0;
     for (const submission of submissions) {
-            const assignment = assignments.find((assignment) => assignment.id === submission.assignment_id);
-            if (learnerId === submission.learner_id && assignment){
-                totalPoints += scoreAssignment(assignments, submission) * assignment.points_possible;
-            }
+      const assignment = assignments.find(
+        (assignment) => assignment.id === submission.assignment_id
+      );
+      if (learnerId === submission.learner_id && assignment) {
+        totalPoints +=
+          scoreAssignment(assignments, submission) * assignment.points_possible;
+      }
     }
     return totalPoints / totalPointsPossible;
   }
-
-  
 }
 
 try {
